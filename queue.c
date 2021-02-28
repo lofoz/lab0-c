@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -30,8 +31,15 @@ queue_t *q_new()
 /* Free all storage used by queue */
 void q_free(queue_t *q)
 {
-    /* TODO: How about freeing the list elements and the strings? */
-    /* Free queue structure */
+    if (!q)
+        return;
+    list_ele_t *cur = q->head;
+    while (cur) {
+        list_ele_t *tmp = cur;
+        cur = cur->next;
+        free(tmp->value);
+        free(tmp);
+    }
     free(q);
 }
 
@@ -66,6 +74,7 @@ bool q_insert_head(queue_t *q, char *s)
         free(newh);
         return false;
     }
+    // memcpy(newh->value, s, strlen(s) + 1);
     newh->next = q->head;
     q->head = newh;
     /* initialize queue tail when queue size is 0 */
@@ -160,6 +169,9 @@ bool q_remove_head(queue_t *q, char *sp, size_t bufsize)
  */
 int q_size(queue_t *q)
 {
+    /* forget !q  */
+    if (!q)
+        return 0;
     return q->size;
 }
 
@@ -198,6 +210,86 @@ void q_reverse(queue_t *q)
  */
 void q_sort(queue_t *q)
 {
-    /* TODO: You need to write the code for this function */
-    /* TODO: Remove the above comment when you are about to implement. */
+    /* forget !q->head */
+    if (!q || !q->head)
+        return;
+    merge_sort(&q->head);
+
+    /* more efficiency way to find tail? */
+    while (q->tail->next) {
+        q->tail = q->tail->next;
+    }
+}
+
+void merge_sort(list_ele_t **head_ref)
+{
+    list_ele_t *head = *head_ref;
+    list_ele_t *a, *b;
+
+    if ((!head) || (!head->next)) {
+        return;
+    }
+
+    front_back_split(head, &a, &b);
+
+    merge_sort(&a);
+    merge_sort(&b);
+
+    *head_ref = sorted_merge(a, b);
+}
+
+void move_node(list_ele_t **dst, list_ele_t **src)
+{
+    list_ele_t *new = *src;
+    assert(new != NULL);
+
+    *src = new->next;
+
+    new->next = *dst;
+
+    *dst = new;
+}
+
+list_ele_t *sorted_merge(list_ele_t *a, list_ele_t *b)
+{
+    list_ele_t dummy;
+    list_ele_t *tail = &dummy;
+    dummy.next = NULL;
+    while (1) {
+        if (!a) {
+            tail->next = b;
+            break;
+        } else if (!b) {
+            tail->next = a;
+            break;
+        }
+        if (strncmp(a->value, b->value, strlen(b->value)) < 0) {
+            move_node(&(tail->next), &a);
+        } else {
+            move_node(&(tail->next), &b);
+        }
+        tail = tail->next;
+    }
+    return dummy.next;
+}
+
+void front_back_split(list_ele_t *src,
+                      list_ele_t **front_ref,
+                      list_ele_t **back_ref)
+{
+    list_ele_t *fast, *slow;
+    slow = src;
+    fast = src->next;
+
+    while (fast) {
+        fast = fast->next;
+        if (fast) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+    }
+
+    *front_ref = src;
+    *back_ref = slow->next;
+    slow->next = NULL;
 }
